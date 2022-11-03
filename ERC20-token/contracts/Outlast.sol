@@ -1,33 +1,48 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts@4.7.3/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts@4.7.3/token/ERC20/extensions/ERC20Burnable.sol";
-import "@openzeppelin/contracts@4.7.3/security/Pausable.sol";
-import "@openzeppelin/contracts@4.7.3/access/Ownable.sol";
+import "./interface/ERC20Interface.sol";
 
-contract Outlast is ERC20, ERC20Burnable, Pausable, Ownable {
-    constructor() ERC20("outlast", "OTT") {
-        _mint(msg.sender, 100e6 ether);
+contract Outlast is ERC20Interface {
+    string public name = "Outlast";
+    string public symbol = "OLT";
+    uint public decimals = 18;
+    uint public totalSupply = 200000000 * 10**decimals;
+
+    mapping(address => uint) balances;
+    mapping(address => mapping(address => uint)) allowed;
+
+    constructor() {
+        balances[msg.sender] = totalSupply;
+        emit Transfer(address(0), msg.sender, totalSupply);
     }
 
-    function pause() public onlyOwner {
-        _pause();
+    function balanceOf(address tokenOwner) public view returns (uint balance) {
+        return balances[tokenOwner];
     }
 
-    function unpause() public onlyOwner {
-        _unpause();
+    function transfer(address to, uint tokens) public returns (bool success) {
+        balances[msg.sender] = balances[msg.sender] - tokens;
+        balances[to] = balances[to] + tokens;
+        emit Transfer(msg.sender, to, tokens);
+        return true;
     }
 
-    function mint(address to, uint256 amount) public onlyOwner {
-        _mint(to, amount);
+    function approve(address spender, uint tokens) public returns (bool success) {
+        allowed[msg.sender][spender] = tokens;
+        emit Approval(msg.sender, spender, tokens);
+        return true;
     }
 
-    function _beforeTokenTransfer(address from, address to, uint256 amount)
-        internal
-        whenNotPaused
-        override
-    {
-        super._beforeTokenTransfer(from, to, amount);
+    function transferFrom(address from, address to, uint tokens) public returns (bool success) {
+        balances[from] = balances[from] - tokens;
+        allowed[from][msg.sender] = allowed[from][msg.sender] - tokens;
+        balances[to] = balances[to] + tokens;
+        emit Transfer(from, to, tokens);
+        return true;
+    }
+
+    function allowance(address tokenOwner, address spender) public view returns (uint remaining) {
+        return allowed[tokenOwner][spender];
     }
 }
